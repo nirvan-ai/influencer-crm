@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Creator CRM",
+  title: "Influencer CRM",
   description: "Manage your brand deals and affiliate links.",
 };
 
