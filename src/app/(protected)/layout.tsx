@@ -15,6 +15,9 @@ export default async function ProtectedLayout({ children }: { children: React.Re
         <div className="flex items-center gap-4">
           <span className="font-semibold text-sm">Influencer CRM</span>
           <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
+            Home
+          </Link>
+          <Link href="/pipeline" className="text-sm text-muted-foreground hover:text-foreground">
             Pipeline
           </Link>
           <Link href="/profile" className="text-sm text-muted-foreground hover:text-foreground">
