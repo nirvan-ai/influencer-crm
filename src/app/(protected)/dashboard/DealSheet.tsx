@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Deal, DEAL_STATUSES, DEAL_TYPES, DealStatus, DealType, STATUS_LABELS } from '@/lib/types'
+import { ActivityFeed } from './ActivityFeed'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -72,6 +73,15 @@ export function DealSheet({ deal, onClose }: Props) {
       .eq('id', deal.id)
 
     if (err) { setError(err.message); setLoading(false); return }
+
+    if (status !== deal.status) {
+      await supabase.from('activity').insert({
+        deal_id: deal.id,
+        event_type: 'status_change',
+        text: `Stage changed from ${STATUS_LABELS[deal.status]} to ${STATUS_LABELS[status]}`,
+      })
+    }
+
     setLoading(false)
     onClose()
     router.refresh()
@@ -157,6 +167,7 @@ export function DealSheet({ deal, onClose }: Props) {
             {deleting ? 'Deleting…' : 'Delete deal'}
           </Button>
         </form>
+        {deal && <ActivityFeed dealId={deal.id} />}
       </SheetContent>
     </Sheet>
   )

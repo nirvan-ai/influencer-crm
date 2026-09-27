@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Deal, DEAL_STATUSES, STATUS_LABELS } from '@/lib/types'
+import { Deal, DEAL_STATUSES, STATUS_LABELS, ReminderWithDeal } from '@/lib/types'
 import { DealCard } from './DealCard'
 import { NewDealSheet } from './NewDealSheet'
 import { DealSheet } from './DealSheet'
@@ -19,7 +19,15 @@ const STATUS_COLORS: Record<string, string> = {
   closed_lost: 'bg-red-50 dark:bg-red-950/30',
 }
 
-export function KanbanBoard({ deals, creatorId }: { deals: Deal[]; creatorId: string }) {
+export function KanbanBoard({
+  deals,
+  creatorId,
+  overdueReminders = [],
+}: {
+  deals: Deal[]
+  creatorId: string
+  overdueReminders?: ReminderWithDeal[]
+}) {
   const [newDealOpen, setNewDealOpen] = useState(false)
   const [activeDeal, setActiveDeal] = useState<Deal | null>(null)
 
@@ -27,8 +35,43 @@ export function KanbanBoard({ deals, creatorId }: { deals: Deal[]; creatorId: st
     DEAL_STATUSES.map((s) => [s, deals.filter((d) => d.status === s)])
   )
 
+  function daysOverdue(remind_at: string) {
+    const diff = Date.now() - new Date(remind_at).getTime()
+    const days = Math.floor(diff / 86400000)
+    if (days === 0) return 'today'
+    if (days === 1) return '1 day overdue'
+    return `${days} days overdue`
+  }
+
   return (
     <>
+      {overdueReminders.length > 0 && (
+        <div className="mb-6 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+          <p className="text-sm font-semibold text-destructive mb-3">
+            Needs attention &middot; {overdueReminders.length}
+          </p>
+          <div className="space-y-2">
+            {overdueReminders.map((r) => (
+              <div
+                key={r.id}
+                className="flex items-start gap-3 text-sm cursor-pointer hover:bg-destructive/10 rounded px-2 py-1 -mx-2"
+                onClick={() => {
+                  const deal = deals.find((d) => d.id === r.deal?.id)
+                  if (deal) setActiveDeal(deal)
+                }}
+              >
+                <div className="flex-1 min-w-0">
+                  <span className="font-medium">{r.deal?.brand?.name ?? 'Unknown brand'}</span>
+                  <span className="text-muted-foreground"> · </span>
+                  <span>{r.text}</span>
+                </div>
+                <span className="text-xs text-destructive whitespace-nowrap">{daysOverdue(r.remind_at!)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Pipeline</h1>
         <Button onClick={() => setNewDealOpen(true)}>+ New deal</Button>

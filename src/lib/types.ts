@@ -35,6 +35,25 @@ export type Brand = {
   created_at: string
 }
 
+export type ActivityEventType = 'status_change' | 'note' | 'reminder'
+
+export type Activity = {
+  id: string
+  deal_id: string
+  event_type: ActivityEventType
+  text: string
+  remind_at: string | null
+  created_at: string
+}
+
+export type ReminderWithDeal = Activity & {
+  deal: {
+    id: string
+    status: DealStatus
+    brand: { id: string; name: string } | null
+  } | null
+}
+
 export type Deal = {
   id: string
   creator_id: string
