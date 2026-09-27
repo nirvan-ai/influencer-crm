@@ -31,6 +31,8 @@ export type Brand = {
   website: string | null
   contact_info: string | null
   category: string | null
+  instagram_handle: string | null
+  dm_thread_url: string | null
   created_by: string
   created_at: string
 }
@@ -50,7 +52,7 @@ export type ReminderWithDeal = Activity & {
   deal: {
     id: string
     status: DealStatus
-    brand: { id: string; name: string } | null
+    brand: { id: string; name: string; instagram_handle: string | null; dm_thread_url: string | null } | null
   } | null
 }
 
@@ -67,5 +69,5 @@ export type Deal = {
   notes: string | null
   created_at: string
   updated_at: string
-  brand: { id: string; name: string } | null
+  brand: { id: string; name: string; instagram_handle: string | null; dm_thread_url: string | null } | null
 }

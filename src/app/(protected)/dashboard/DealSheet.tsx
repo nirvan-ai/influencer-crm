@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Deal, DEAL_STATUSES, DEAL_TYPES, DealStatus, DealType, STATUS_LABELS } from '@/lib/types'
+import { AUTO_REMINDER_CONFIG } from '@/lib/config'
 import { ActivityFeed } from './ActivityFeed'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,6 +22,8 @@ type Props = {
 export function DealSheet({ deal, onClose }: Props) {
   const router = useRouter()
   const [brandName, setBrandName] = useState(deal?.brand?.name ?? '')
+  const [handle, setHandle] = useState(deal?.brand?.instagram_handle ?? '')
+  const [dmUrl, setDmUrl] = useState(deal?.brand?.dm_thread_url ?? '')
   const [dealType, setDealType] = useState<DealType>(deal?.deal_type ?? 'paid')
   const [status, setStatus] = useState<DealStatus>(deal?.status ?? 'lead')
   const [amount, setAmount] = useState(deal?.agreed_amount?.toString() ?? '')
@@ -32,18 +35,9 @@ export function DealSheet({ deal, onClose }: Props) {
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
 
-  // Reset state when deal changes
-  const currentId = deal?.id
-  if (deal && deal.id !== currentId) {
-    setBrandName(deal.brand?.name ?? '')
-    setDealType(deal.deal_type)
-    setStatus(deal.status)
-    setAmount(deal.agreed_amount?.toString() ?? '')
-    setCurrency(deal.currency)
-    setDeliverables(deal.deliverables ?? '')
-    setDeadline(deal.content_deadline ?? '')
-    setNotes(deal.notes ?? '')
-  }
+  const instagramProfileUrl = handle
+    ? `https://www.instagram.com/${handle.replace(/^@/, '')}`
+    : null
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -52,10 +46,15 @@ export function DealSheet({ deal, onClose }: Props) {
     setLoading(true)
 
     const supabase = createClient()
+    const prevStatus = deal.status
 
-    // Update brand name if changed
-    if (deal.brand_id && brandName.trim() !== deal.brand?.name) {
-      await supabase.from('brand').update({ name: brandName.trim() }).eq('id', deal.brand_id)
+    // Update brand
+    if (deal.brand_id) {
+      await supabase.from('brand').update({
+        name: brandName.trim(),
+        instagram_handle: handle.trim().replace(/^@/, '') || null,
+        dm_thread_url: dmUrl.trim() || null,
+      }).eq('id', deal.brand_id)
     }
 
     const { error: err } = await supabase
@@ -74,12 +73,26 @@ export function DealSheet({ deal, onClose }: Props) {
 
     if (err) { setError(err.message); setLoading(false); return }
 
-    if (status !== deal.status) {
+    if (status !== prevStatus) {
+      // Log stage change
       await supabase.from('activity').insert({
         deal_id: deal.id,
         event_type: 'status_change',
-        text: `Stage changed from ${STATUS_LABELS[deal.status]} to ${STATUS_LABELS[status]}`,
+        text: `Stage changed from ${STATUS_LABELS[prevStatus]} to ${STATUS_LABELS[status]}`,
       })
+
+      // Auto-reminder for the new stage
+      const reminder = AUTO_REMINDER_CONFIG[status]
+      if (reminder) {
+        const remindAt = new Date()
+        remindAt.setDate(remindAt.getDate() + reminder.days)
+        await supabase.from('activity').insert({
+          deal_id: deal.id,
+          event_type: 'reminder',
+          text: reminder.text,
+          remind_at: remindAt.toISOString(),
+        })
+      }
     }
 
     setLoading(false)
@@ -103,11 +116,57 @@ export function DealSheet({ deal, onClose }: Props) {
         <SheetHeader>
           <SheetTitle>{deal?.brand?.name ?? 'Deal'}</SheetTitle>
         </SheetHeader>
+
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          {/* Brand */}
           <div className="space-y-1">
             <Label>Brand name</Label>
             <Input value={brandName} onChange={(e) => setBrandName(e.target.value)} />
           </div>
+
+          {/* Instagram */}
+          <div className="space-y-1">
+            <Label>Instagram handle</Label>
+            <div className="flex gap-2">
+              <Input
+                value={handle}
+                onChange={(e) => setHandle(e.target.value)}
+                placeholder="@glossier"
+                className="flex-1"
+              />
+              {instagramProfileUrl && (
+                <Button type="button" variant="outline" size="sm" asChild>
+                  <a href={instagramProfileUrl} target="_blank" rel="noopener noreferrer">
+                    Profile
+                  </a>
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label>DM thread URL</Label>
+            <div className="flex gap-2">
+              <Input
+                value={dmUrl}
+                onChange={(e) => setDmUrl(e.target.value)}
+                placeholder="Paste Instagram DM link"
+                className="flex-1"
+              />
+              {dmUrl.trim() && (
+                <Button type="button" variant="outline" size="sm" asChild>
+                  <a href={dmUrl.trim()} target="_blank" rel="noopener noreferrer">
+                    Open DM
+                  </a>
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">Open your Instagram DM on web, copy the URL, paste here.</p>
+          </div>
+
+          <Separator />
+
+          {/* Deal details */}
           <div className="space-y-1">
             <Label>Stage</Label>
             <Select value={status} onValueChange={(v) => setStatus(v as DealStatus)}>
@@ -152,21 +211,17 @@ export function DealSheet({ deal, onClose }: Props) {
             <Label>Notes</Label>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
           </div>
+
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? 'Saving…' : 'Save changes'}
           </Button>
           <Separator />
-          <Button
-            type="button"
-            variant="destructive"
-            className="w-full"
-            disabled={deleting}
-            onClick={handleDelete}
-          >
+          <Button type="button" variant="destructive" className="w-full" disabled={deleting} onClick={handleDelete}>
             {deleting ? 'Deleting…' : 'Delete deal'}
           </Button>
         </form>
+
         {deal && <ActivityFeed dealId={deal.id} />}
       </SheetContent>
     </Sheet>

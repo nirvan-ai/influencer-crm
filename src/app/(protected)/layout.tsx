@@ -12,7 +12,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   return (
     <div className="min-h-screen flex flex-col">
       <nav className="border-b px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
           <span className="font-semibold text-sm">Creator CRM</span>
           <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
             Pipeline
@@ -23,7 +23,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
         </div>
         <SignOutButton />
       </nav>
-      <main className="flex-1 p-6">{children}</main>
+      <main className="flex-1 p-4 md:p-6">{children}</main>
     </div>
   )
 }
