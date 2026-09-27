@@ -23,7 +23,6 @@ export function DealSheet({ deal, onClose }: Props) {
   const router = useRouter()
   const [brandName, setBrandName] = useState(deal?.brand?.name ?? '')
   const [handle, setHandle] = useState(deal?.brand?.instagram_handle ?? '')
-  const [dmUrl, setDmUrl] = useState(deal?.brand?.dm_thread_url ?? '')
   const [dealType, setDealType] = useState<DealType>(deal?.deal_type ?? 'paid')
   const [status, setStatus] = useState<DealStatus>(deal?.status ?? 'lead')
   const [amount, setAmount] = useState(deal?.agreed_amount?.toString() ?? '')
@@ -35,9 +34,9 @@ export function DealSheet({ deal, onClose }: Props) {
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
 
-  const instagramProfileUrl = handle
-    ? `https://www.instagram.com/${handle.replace(/^@/, '')}`
-    : null
+  const cleanHandle = handle.replace(/^@/, '')
+  const instagramProfileUrl = cleanHandle ? `https://www.instagram.com/${cleanHandle}` : null
+  const instagramDmUrl = cleanHandle ? `https://ig.me/m/${cleanHandle}` : null
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -53,7 +52,6 @@ export function DealSheet({ deal, onClose }: Props) {
       await supabase.from('brand').update({
         name: brandName.trim(),
         instagram_handle: handle.trim().replace(/^@/, '') || null,
-        dm_thread_url: dmUrl.trim() || null,
       }).eq('id', deal.brand_id)
     }
 
@@ -127,42 +125,31 @@ export function DealSheet({ deal, onClose }: Props) {
           {/* Instagram */}
           <div className="space-y-1">
             <Label>Instagram handle</Label>
-            <div className="flex gap-2">
-              <Input
-                value={handle}
-                onChange={(e) => setHandle(e.target.value)}
-                placeholder="@glossier"
-                className="flex-1"
-              />
-              {instagramProfileUrl && (
-                <Button type="button" variant="outline" size="sm" asChild>
-                  <a href={instagramProfileUrl} target="_blank" rel="noopener noreferrer">
-                    Profile
-                  </a>
-                </Button>
-              )}
-            </div>
+            <Input
+              value={handle}
+              onChange={(e) => setHandle(e.target.value)}
+              placeholder="@glossier"
+            />
           </div>
 
-          <div className="space-y-1">
-            <Label>DM thread URL</Label>
+          {(instagramProfileUrl || instagramDmUrl) && (
             <div className="flex gap-2">
-              <Input
-                value={dmUrl}
-                onChange={(e) => setDmUrl(e.target.value)}
-                placeholder="Paste Instagram DM link"
-                className="flex-1"
-              />
-              {dmUrl.trim() && (
-                <Button type="button" variant="outline" size="sm" asChild>
-                  <a href={dmUrl.trim()} target="_blank" rel="noopener noreferrer">
-                    Open DM
+              {instagramProfileUrl && (
+                <Button type="button" variant="outline" size="sm" className="flex-1" asChild>
+                  <a href={instagramProfileUrl} target="_blank" rel="noopener noreferrer">
+                    View profile
+                  </a>
+                </Button>
+              )}
+              {instagramDmUrl && (
+                <Button type="button" variant="outline" size="sm" className="flex-1" asChild>
+                  <a href={instagramDmUrl} target="_blank" rel="noopener noreferrer">
+                    Message
                   </a>
                 </Button>
               )}
             </div>
-            <p className="text-xs text-muted-foreground">Open your Instagram DM on web, copy the URL, paste here.</p>
-          </div>
+          )}
 
           <Separator />
 
