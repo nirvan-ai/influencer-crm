@@ -70,4 +70,5 @@ export type Deal = {
   created_at: string
   updated_at: string
   brand: { id: string; name: string; instagram_handle: string | null; dm_thread_url: string | null } | null
+  activity?: { created_at: string; event_type: string }[]
 }

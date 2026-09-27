@@ -79,15 +79,15 @@ export function DealSheet({ deal, onClose }: Props) {
         text: `Stage changed from ${STATUS_LABELS[prevStatus]} to ${STATUS_LABELS[status]}`,
       })
 
-      // Auto-reminder for the new stage
-      const reminder = AUTO_REMINDER_CONFIG[status]
-      if (reminder) {
+      // Auto-reminders for the new stage
+      const reminders = AUTO_REMINDER_CONFIG[status] ?? []
+      for (const r of reminders) {
         const remindAt = new Date()
-        remindAt.setDate(remindAt.getDate() + reminder.days)
+        remindAt.setDate(remindAt.getDate() + r.days)
         await supabase.from('activity').insert({
           deal_id: deal.id,
           event_type: 'reminder',
-          text: reminder.text,
+          text: r.text,
           remind_at: remindAt.toISOString(),
         })
       }

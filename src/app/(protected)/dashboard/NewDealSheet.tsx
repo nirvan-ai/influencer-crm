@@ -69,15 +69,15 @@ export function NewDealSheet({ open, onClose, creatorId }: Props) {
 
     if (dealErr) { setError(dealErr.message); setLoading(false); return }
 
-    // Auto-reminder for lead stage
-    const reminder = AUTO_REMINDER_CONFIG['lead']
-    if (reminder && deal) {
+    // Auto-reminders for lead stage
+    const reminders = AUTO_REMINDER_CONFIG['lead'] ?? []
+    for (const r of reminders) {
       const remindAt = new Date()
-      remindAt.setDate(remindAt.getDate() + reminder.days)
+      remindAt.setDate(remindAt.getDate() + r.days)
       await supabase.from('activity').insert({
-        deal_id: deal.id,
+        deal_id: deal!.id,
         event_type: 'reminder',
-        text: reminder.text,
+        text: r.text,
         remind_at: remindAt.toISOString(),
       })
     }

@@ -35,12 +35,25 @@ function nextStage(current: DealStatus): DealStatus | null {
   return DEAL_STATUSES[idx + 1] ?? null
 }
 
+function lastContactLabel(activities: { created_at: string }[]) {
+  if (!activities.length) return null
+  const latest = Math.max(...activities.map(a => new Date(a.created_at).getTime()))
+  const days = Math.floor((Date.now() - latest) / 86400000)
+  if (days === 0) return { text: 'Active today', color: 'text-muted-foreground' }
+  if (days <= 7) return { text: `${days}d ago`, color: 'text-muted-foreground' }
+  if (days <= 14) return { text: `${days}d ago`, color: 'text-amber-600 dark:text-amber-400' }
+  return { text: `${days}d ago — going cold`, color: 'text-destructive' }
+}
+
 export function DealCard({ deal, onClick }: { deal: Deal; onClick: () => void }) {
   const router = useRouter()
   const deadline = deal.content_deadline ? deadlineLabel(deal.content_deadline) : null
   const next = nextStage(deal.status)
   const handle = deal.brand?.instagram_handle
   const dmUrl = handle ? `https://ig.me/m/${handle}` : null
+  const activities = deal.activity ?? []
+  const lastContact = lastContactLabel(activities)
+  const touchCount = activities.length
 
   async function advance(e: React.MouseEvent) {
     e.stopPropagation()
@@ -52,14 +65,14 @@ export function DealCard({ deal, onClick }: { deal: Deal; onClick: () => void })
       event_type: 'status_change',
       text: `Stage changed from ${STATUS_LABELS[deal.status]} to ${STATUS_LABELS[next]}`,
     })
-    const reminder = AUTO_REMINDER_CONFIG[next]
-    if (reminder) {
+    const reminders = AUTO_REMINDER_CONFIG[next] ?? []
+    for (const r of reminders) {
       const remindAt = new Date()
-      remindAt.setDate(remindAt.getDate() + reminder.days)
+      remindAt.setDate(remindAt.getDate() + r.days)
       await supabase.from('activity').insert({
         deal_id: deal.id,
         event_type: 'reminder',
-        text: reminder.text,
+        text: r.text,
         remind_at: remindAt.toISOString(),
       })
     }
@@ -99,6 +112,16 @@ export function DealCard({ deal, onClick }: { deal: Deal; onClick: () => void })
             {deadline.text}
           </p>
         )}
+
+        {/* Last contact + touch count */}
+        <div className="flex items-center justify-between">
+          {lastContact && (
+            <p className={`text-xs ${lastContact.color}`}>{lastContact.text}</p>
+          )}
+          {touchCount > 0 && (
+            <p className="text-xs text-muted-foreground ml-auto">{touchCount} {touchCount === 1 ? 'touch' : 'touches'}</p>
+          )}
+        </div>
 
         {/* Next stage button */}
         {next && (

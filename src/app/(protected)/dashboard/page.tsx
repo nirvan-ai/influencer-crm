@@ -18,7 +18,7 @@ export default async function DashboardPage() {
 
   const { data: deals } = await supabase
     .from('deal')
-    .select('*, brand(id, name, instagram_handle, dm_thread_url)')
+    .select('*, brand(id, name, instagram_handle, dm_thread_url), activity(created_at, event_type)')
     .eq('creator_id', creator.id)
     .order('created_at', { ascending: false })
 
