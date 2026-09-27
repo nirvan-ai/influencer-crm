@@ -184,7 +184,7 @@ export function KanbanBoard({
       </div>
 
       <NewDealSheet open={newDealOpen} onClose={() => setNewDealOpen(false)} creatorId={creatorId} />
-      <DealSheet deal={activeDeal} onClose={() => setActiveDeal(null)} />
+      <DealSheet key={activeDeal?.id ?? 'empty'} deal={activeDeal} onClose={() => setActiveDeal(null)} />
     </>
   )
 }
